@@ -1,0 +1,229 @@
+---
+title: "Carbon Emissions" 
+author: "BlueCoffee"
+fontsize: 12pt
+geometry: margin=1in
+urlcolor: black
+output: pdf_document
+header-includes:
+- \usepackage{setspace}
+- \onehalfspacing
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, highlight=FALSE, comment=NA, warnings=FALSE,message=FALSE)
+
+library(corrplot)
+library(Hmisc)
+library(car)
+library(olsrr)
+```
+
+```{r, echo=FALSE, warning=FALSE,results=FALSE}
+# Use this chunk for reading in packages.
+# Use this chunk for reading in the data, combining the data, and any other major data cleaning that is not relevant to show.
+# Remove the ## before all code.
+
+```
+
+# Pledege
+
+Please type your names in the appropriate space below. Failing to do so will result in a 0 on this assignment.
+
+"We have neither given nor received unauthorized aid on this assignment"
+
+-   Member 1: Rhea Sethi
+-   Member 2: Jialin (Annie) Lian
+-   Member 3: Hershi Aytoda
+
+\newpage
+
+## Introduction
+
+This project is about analyzing different factors that relate to CO2 emissions per capita (measured in metric tons per person) in each US state. This project is relevant as the climate crisis continues to grow and cause potential concerns to human health and the environment. With this study, we can pinpoint which parts of the US are of the most concern and what factors might be causing an increase in CO2 emissions. Discovering these details leads to more alertness within necessary communities, such as seeing action in their governments or implementing prevention strategies. The three variables in our research questions include forest fires, public transit, and state government policies. These three variables are something that we can consider changing for improvement in our lives. Forest fires have been rampant in the nation, but if they discover an extremely abundant effect on the CO2 emissions and therefore air quality, people might take the concern more seriously. Similarly, if there is a significant benefit of using public transportation, then the nation might put more effort into improving transit. Lastly, if governments who take environmental initiatives have cleaner air or lower CO2 emissions then other governments might also implement the same policies. The overall CO2 emission of the USA is likely to be affected if there is uniform agreement throughout the country. In relation to these explanatory variables, our three research questions are as follows:
+
+1.  Do states with more wildfires throughout the year lead to an increase in the average carbon dioxide emissions per capita measured in metric tons per person?
+
+2.  Does the intervention of state governments in the USA positively affect the environment by decreasing the average carbon dioxide emissions per capita?
+
+3.  Does a state using high amounts of public transportation lead to lower or decreasing levels of carbon dioxide emissions per capita?
+
+## Data Description
+
+A lot of the data came from different US government websites, specifically the EIA(Energy Information Administration), EDA (Economic Development Administration) for populations, and the EPA(Environmental (Protection Agency). This data came from the federal government and had lots of specific and relevant information for each state such as population, energy consumption, and state government plans. We used the Insurance Independence Institute for data on wildfires and data from bikeleague.org for transportation information. These websites specifically specialize in the data we used from them and provide other facts on similar topics. Another source that we used was statistica and world population review. These are independent data sources which might be less reliable compared to the others. The total land data from statistica came from the US census but since there is lots of convoluted data on the US census website, statistica condescended the needed data.
+
+For the histogram, there was a log transformation used in order to make the histogram graph in order to reduce the skew. The log function compressed the data a bit so everything now looks more continuous and less skewed. Also, we had to convert large numbers, such as population and total land area to smaller scale numbers so R studio could properly interpret the data.
+
+Our observations are simply each of the 50 US states, not including any territories or DC. These observations can tell us a lot about which specific state is of the most concern and reasons why. Many states in the US are different from each other, whether it be in terms of geography, climate, terrain, or in a political sense. This makes each observation unique and important to observe.
+
+A potential concern is that all the data was not the exact same year. We tried to gather the most recent data that was available while lining up the years as much as possible. Our data is not more than 3 years old which might be helpful towards combating the time concern.
+
+Most of our data comes from reputable government sources like the EIA, EPA, and EDA, which are considered highly reliable due to their transparency and up-to-date information. We also used data from the Insurance Information Institute and BikeLeague.org, which specialize in wildfire and transportation data, respectively. While Statista and World Population Review are less authoritative, they helped simplify access to census-based data when official sources were difficult to navigate.
+
+## Exploratory Data Analysis
+
+```{r, echo=FALSE}
+CO2 <-read.csv("https://raw.githubusercontent.com/annielian123/groupwork/main/dataCO2.csv")
+
+
+par(mfrow=c(2,4),pin=c(1,1),mar=c(4,3,4,1))
+CO2$Wildfires <- as.numeric(CO2$Wildfires)
+
+CO2$State_plan <- tolower(CO2$State_plan)
+CO2$Large_cities <- tolower(CO2$Large_cities)
+
+CO2$State_plan <- as.factor(CO2$State_plan)
+CO2$Large_cities <- as.factor(CO2$Large_cities)
+
+hist(CO2$Carbon_Emission, xlab="Carbon_Emission", main ="Histogram of CO emissions")
+
+hist(log(CO2$Carbon_Emission), xlab="Log of Carbon emissions", main ="Log Histogram of CO emissions")
+
+#quantitative variables scatterplot
+plot(CO2$Wildfires,CO2$Carbon_Emission,xlab="Number of Wildfires",ylab="Carbon Emissions") 
+
+plot(CO2$forested_land,CO2$Carbon_Emission,xlab="Percent of Forested Land",ylab="Carbon Emissions") 
+
+plot(CO2$Energy_consumption,CO2$Carbon_Emission,xlab="Energy consumption per capita",ylab="Carbon Emissions") 
+
+plot(CO2$Population,CO2$Carbon_Emission,xlab="Population",ylab="Carbon Emissions") 
+# qua* quan
+plot(Carbon_Emission~Wildfires , col=factor(State_plan),data=CO2,xlab="Wildfire",ylab="Carbon Emission", main = "State plan * Wildfires") 
+legend("topright",legend = levels(factor(CO2$State_plan)), pch = 19,
+       col = factor(levels(factor(CO2$State_plan))))
+#qua*qua
+interaction.plot(CO2$Large_cities, CO2$State_plan, CO2$Carbon_Emission,fun=mean,trace.label="State Plan", xlab="Large Cities",ylab="Carbon_Emission", main = "State plan * Large Cities")
+```
+
+```{r, echo=FALSE, warning=FALSE,results=FALSE}
+## Use this chunk to compute any summary statistics that you want to use
+## in your conclusions. 
+## These will not print in your report
+model1 <- lm(Carbon_Emission ~ Total_land+ Energy_consumption+forested_land+State_plan+Large_cities+Transport+Wildfires+Population+State_plan *Large_cities+Wildfires*State_plan, data = CO2)
+summary(model1)
+
+
+#model2 <- lm(Carbon_Emission ~ Total_land + Energy_consumption  +
+             #State_plan + Wildfires + State_plan:Wildfires+Transport:forested_land+State_plan:forested_land, data = CO2)
+#summary(model2)
+ols_step_both_p(model1,p_ent=0.15,p_rem=0.15,details=T)
+
+anova(model2, model1)
+```
+
+```{r, echo=FALSE, warning=FALSE,results=FALSE}
+
+#nstall.packages("car")   # Run this only once
+library(car)
+
+boxplot(Carbon_Emission~State_plan,CO2, ylab="Body Mass (grams)")
+boxplot(Carbon_Emission~Large_cities,CO2, ylab="Body Mass (grams)")
+boxplot(Carbon_Emission~Transport,CO2, ylab="Body Mass (grams)")
+#There are relationships with each of the qualitative explanatory variables because the mean value of y is different for each level.
+plot(Carbon_Emission~Wildfires , col=factor(State_plan),data=CO2,xlab="Bill Depth",ylab="Body Mass (grams)") 
+legend("topright",legend = levels(factor(CO2$State_plan)), pch = 19,
+       col = factor(levels(factor(CO2$State_plan))))
+
+new_data <- CO2[-c(41, 50), ]
+
+model_clean <- lm(log(Carbon_Emission) ~ log(Total_land) + log(Energy_consumption) +
+                    forested_land + State_plan + Large_cities + Wildfires +
+                    State_plan:Large_cities + State_plan:Wildfires,
+                    data = new_data)
+summary(model_clean)
+
+newco2 <- data.frame(Total_land = 52400, Energy_consumption = 375,forested_land = 70.6, Wildfires = 1856, State_plan = "yes", Large_cities = "no")
+newco2
+exp(predict(model_clean,newco2, interval="prediction"))
+
+
+model_3 <- lm(log(Carbon_Emission) ~ log(Total_land) + log(Energy_consumption) + forested_land + State_plan + State_plan * Large_cities + Wildfires * State_plan, data = CO2)
+anova(model2, model1)
+residualPlots(model_3,tests=F)
+plot(model_3, which=c(1,2))
+hist(residuals(model_3))
+
+plot(model_3,which=4)
+influencePlot(model_3,fill=F)
+ols_plot_resid_stud_fit(model_3)
+
+  
+
+formula(model_clean)
+levels(clean_data$State_plan)
+levels(clean_data$Large_cities)
+str(new$State_plan)
+str(new$Large_cities)
+log_pred <- predict(model_clean, newdata = new, interval = "prediction")
+
+#interaction.plot(CO2$State_plan, CO2$Large_cities, CO2$Carbon_Emission,fun=mean,trace.label="Sex", xlab="Species",ylab="Mean Body Mass")
+
+
+#names(CO2)
+#cor1<-round(cor(CO2["Total_land","Energy_consumption","forested_land","Wildfires","Population"]),4)
+#CO2cor <- round(cor(CO2[, c(3:5, 9:10)], use = "complete.obs"), 4)
+#CO2cor
+#corrplot(CO2cor)
+
+
+#co2mod1<-lm(Carbon_Emission~.-Large_cities-Transport-State_plan-State..Observations.,data=CO2)
+#summary(co2mod1)
+#co2mod1vif<-round(vif(co2mod1),3)
+#co2mod1vif
+#mean(co2mod1vif)
+
+#Adding qualitative variables 
+#mod3<-lm(Carbon_Emission~.-Transport-State_plan-State..Observations.,data=CO2)
+#summary(mod3)
+```
+
+## Conclusions
+
+The exploratory data analysis we conducted above provided insight into the relationships between our three explanatory variables (wildfires, public transit, and state government policies) and our response variable, carbon emissions per capita. Through graphs and numerical summaries, we were able to identify patterns that will influence our regression analysis.
+
+The histogram of CO2 emissions (our response variable) displayed a right-skew, which we fixed through a log transformation as shown in the second histogram. We then created scatterplots of the different explanatory variables. The variables that were not described visually include total land and water area, state climate action plan, and percentage of people who take transit. The data suggests that states with higher total land and water area tend to have less carbon emissions per capita, as proven by a coefficient of -0.049 and a p value of 0.001\<0.01, showing that this result is statistically significant. Next, the data suggests that states with a state climate action plan also tend to have higher carbon emissions with a very high coefficient (7.69), however with a p-value of 0.097, this result is not statistically significant. Last, the data suggests that states with medium public transit use tend to have higher carbon emissions ($\beta$ = 1.16) and states with low public transit tend to have low carbon emissions due to a negative relationship ($\beta$ = -1.55), but both these results cannot be deemed significant due to p-values of 0.84 and 0.76, which are both above 0.01.
+
+As for the three research questions proposed, first the data suggests that states that experience more wildfires in a year also have more carbon emissions per capita. This came as expected, as wildfires release carbon into the atmosphere, leading to higher emissions. Next, the data illustrated that states with state climate action plans (government intervention) also tended to have higher carbon emissions per capita. This was not expected, as a state with more planned government policy would be expected to have lower carbon emissions as there are plans in place to eliminate negative impact on the environment. However, the interaction between state plans and wildfires showed a negative relationship, meaning that the presence of a state plan may reduce the impact of wildfires on carbon emissions. This needs to be inspected more through more analysis. Last, the data suggests that high transport in a state could lead to higher carbon emissions per capita due to a positive coefficient, however the p-value (0.84 \> 0.01) does not prove this statistic is significant. The relationship between low transport and carbon emissions led to a negative coefficient, but again, the p-value was not below 0.01 and deemed this statistic insignificant. Therefore, our model may need to be changed a bit before moving forwards with our third research question.
+
+Moving forwards with this project, we will refine and edit our regression model to better investigate the effects of the most important predictors that we analyzed, which were wildfires, presence of a state climate action plan, and public transportation. We may explore different interactions between these explanatory variables or even different transformations.
+
+\newpage
+
+## Appendix A: Data Dictionary
+
+|                **Variable Name**                | **Abbreviated Name** |                                   **Description**                                   |
+|:-----------------------------------------------:|:--------------------:|:-----------------------------------------------------------------------------------:|
+|           Carbon emissions per Capita           |   Carbon_Emission    |          This is the response variable measured in metric tons per person           |
+|            Total land and water area            |      Total_land      |              This is the first variable explanatory measured in acres               |
+|     Energy-related carbon dioxide emissions     |  Energy_consumption  |                     This is the first variable measured in BTU                      |
+|            Percent of forested land             |    forested_land     |                      This is the first variable measured in %                       |
+|            State climate action plan            |      State_plan      | This is the first variable measured in presence or absence of a state plan (yes/no) |
+| Cities with populations above 250,000 per state |     Large_cities     | This is the first variable measured in presence or absence of a large city (yes/no) |
+|      Percentage of People Who Take Transit      |      Transport       |        This is the first variable measured in low, medium, or high transport        |
+|                    Wildfires                    |      Wildfires       |           This is the first variable measured in number of fires per year           |
+|                   Population                    |      Population      |              This is the first variable measured in millions of people              |
+
+\newpage
+
+## Appendix B: Data Rows
+
+```{r, echo=FALSE}
+# Use head() function to output first several rows
+head(CO2)
+names(CO2)
+```
+
+\newpage
+
+## Appendix C: References
+
+### Introduction
+
+1.  Sources of Greenhouse Gas Emissions. (2025, January 16). United States Environmental Protection Agency. <https://www.epa.gov/ghgemissions/sources-greenhouse-gas-emissions>
+2.  NASA. (2024, October 23). The Causes of Climate Change. Science.nasa.gov; NASA. <https://science.nasa.gov/climate-change/causes/>
+3.  Center for Climate and Energy Solutions. (2018, November 26). Wildfires and Climate Change. Center for Climate and Energy Solutions; Center for Climate and Energy Solutions. <https://www.c2es.org/content/wildfires-and-climate-change/>
+
+### Data
+
+1.  Insurance Information Institute. (2020). Facts + Statistics: Wildfires \| III. Iii.org. <https://www.iii.org/fact-statistic/facts-statistics-wildfires>
+2.  State Energy Profile Data. (2025). Eia.gov. <https://www.eia.gov/state/data.php>
